@@ -45,6 +45,8 @@ local function buildBadge()
     face:SetPoint("BOTTOMRIGHT", -2, 2)
     face:SetColorTexture(0.08, 0.08, 0.08, 1)
     badge.word = badge:CreateFontString(nil, "ARTWORK")
+    -- A font is needed before the first SetText; layout() resizes it.
+    badge.word:SetFont(STANDARD_TEXT_FONT, 26, "OUTLINE")
     badge.word:SetPoint("TOP", 0, -6)
     badge.label = badge:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
     badge.label:SetPoint("TOP", badge.word, "BOTTOM", 0, -2)
