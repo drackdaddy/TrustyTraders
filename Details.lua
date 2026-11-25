@@ -8,7 +8,7 @@
 -- closes with it; while it is open, its X is the only close button and
 -- closes both. Escape closes both too.
 -- Events: none
--- SavedVariables: TrustyTradersDB.compact (Settings tab)
+-- SavedVariables: TrustyTradersDB.compact, TrustyTradersDB.sound (Settings tab)
 local _, ns = ...
 
 local WIDTH, HEIGHT = 420, 600
@@ -24,12 +24,13 @@ local LEVEL_TABS = {"Low", "Moderate", "Elevated", "High", ns.UNRATED}
 local FORMULA = "Unexplained = most gold ever owned - total gold acquired\nShare = unexplained x 100 / most gold ever owned, rounded down\nYour own verdict, the one your goblin sends, also subtracts gold mailed from your alts first."
 local EXAMPLE_PEAK = 10000000 -- 1,000g in copper
 local EXAMPLE_SHARES = {Low = 10, Moderate = 35, Elevated = 60, High = 90}
-local MOOD_WORDS = {Cheer = "cheers", Talk = "talks it over", Exclaim = "shouts a warning", Question = "scratches his head"}
+local MOOD_WORDS = {Cheer = "cheers", Talk = "talks it over", Exclaim = "shouts a warning",
+    Point = "points and shouts", Question = "scratches his head"}
 local UNRATED_SECTIONS = {
     {"When it happens", "Peak gold is under 5g, the game won't share the counters, the player can't be inspected (too far away, in combat, or the achievement comparison is open), or no reply comes within 10 seconds."},
     {"The math", "None. Without both counters, or with under 5g of peak gold, a share would mislead, so I don't guess."},
     {"What gets saved", "Unrated never replaces a verdict saved from an earlier trade."},
-    {"What the goblin does", "He scratches his head and tells you why. If they offer gold anyway, he warns you."},
+    {"What the goblin does", "He scratches his head, stamps it ???, and tells you why. If they offer gold anyway, he warns you, louder the more they offer."},
 }
 local NOTES = {
     Income = "Bars show each source's share of total gold acquired. Gold from player trades, gifts and mail isn't recorded here.",
@@ -113,7 +114,8 @@ local function levelSections(name)
             .. " of peak gold unexplained, with at least 5g of peak gold."},
         {"Worked example", example},
         {"With " .. whose .. " numbers", applied},
-        {"What the goblin does", "He " .. MOOD_WORDS[ns.Mood(name)] .. ": \"" .. ns.ADVICE[name] .. "\""},
+        {"What the goblin does", "He " .. MOOD_WORDS[ns.Mood(name)] .. " and stamps it " .. ns.STAMPS[name]
+            .. ", with lines like: \"" .. ns.QUIPS[name][1] .. "\""},
     }
 end
 
@@ -168,6 +170,7 @@ local function render()
     else renderSections(nil) end
     window.settings:SetShown(tab == "Settings")
     window.compact:SetChecked(ns.db.compact)
+    window.sound:SetChecked(ns.db.sound)
     for _, row in ipairs(window.rows) do row:Hide() end
     window.note:SetText("")
     window.empty:SetShown(BARS[tab] ~= nil and not stats)
@@ -286,6 +289,19 @@ local function buildBody()
     help:SetJustifyH("LEFT")
     help:SetSpacing(2)
     help:SetText("Trades open a small strip beside the trade window instead of the goblin: just the verdict, one line of reasoning and any gold warning. Details still opens the full reasoning. Your own rating from the minimap always uses the full goblin.")
+
+    window.sound = CreateFrame("CheckButton", nil, window.settings, "UICheckButtonTemplate")
+    window.sound:SetSize(26, 26)
+    window.sound:SetPoint("TOPLEFT", help, "BOTTOMLEFT", -30, -14)
+    window.sound:SetScript("OnClick", function(self) ns.db.sound = self:GetChecked() and true or false end)
+    local soundLabel = window.settings:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    soundLabel:SetPoint("LEFT", window.sound, "RIGHT", 4, 0)
+    soundLabel:SetText("Goblin sounds")
+    local soundHelp = window.settings:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    soundHelp:SetPoint("TOPLEFT", window.sound, "BOTTOMLEFT", 30, -2)
+    soundHelp:SetWidth(INNER - 30)
+    soundHelp:SetJustifyH("LEFT")
+    soundHelp:SetText("A coin jingles when the goblin stamps a clean verdict, and a warning horn sounds for a risky one.")
 
     window.empty = window.content:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
     window.empty:SetPoint("TOP", 0, BODY_TOP - 20)

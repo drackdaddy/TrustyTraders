@@ -2,14 +2,24 @@
 -- counters, swaps verdicts with a fellow Trusty Trader, remembers what it
 -- learned, warns harder when a risky partner offers gold, and writes the
 -- brief and the full reasoning the goblin shows. It never accepts or cancels
--- a trade; the decision stays with the player.
+-- a trade; the decision stays with the player. Each trade gets one random quip
+-- for its verdict, the goblin grows more alarmed the more gold a risky partner
+-- offers, and a returning partner is greeted as an old friend.
 -- Events: TRADE_SHOW, TRADE_CLOSED, TRADE_MONEY_CHANGED
--- SavedVariables: TrustyTradersDB.verdicts {[guid] = {name, checked, claimed, at}}
+-- SavedVariables: TrustyTradersDB.verdicts {[guid] = {name, checked, claimed, at, trades}}
 local _, ns = ...
 
 local CAVEATS = "This is a hunch, not proof. Gifts, guild funds, alt mail and honest trades look the same as bought gold. Their goblin's verdict is self-reported and can't be checked. Never use this to call someone out."
 
-local trade -- the open trade: {guid, name, last, mine, sent, check, claimed}
+-- What the goblin shouts when a risky partner offers gold, from the largest
+-- offer down: {least copper, mood, words}.
+local ALARMS = {
+    {10000000, "Point", "That much gold from books like these? Think hard, friend!"},
+    {1000000, "Exclaim", "That's serious gold! If it was bought, it can vanish from your bags."},
+    {1, "Exclaim", "They're putting gold in. If it was bought, Blizzard can take it back."},
+}
+
+local trade -- the open trade: {guid, name, last, trades, mine, sent, check, quip, claimed}
 
 -- What a claimed verdict means next to the one the goblin checked itself.
 local function claimNote()
@@ -28,7 +38,7 @@ local function details()
     local verdict = {}
     if not check then verdict[1] = "Still checking their books..."
     else
-        verdict[1] = check.reason or ns.ADVICE[check.verdict]
+        verdict[1] = check.reason or trade.quip
         if check.peak then
             verdict[2] = "Most gold ever owned: " .. ns.Gold(check.peak)
             verdict[3] = "Total gold acquired: " .. ns.Gold(check.acquired)
@@ -65,36 +75,40 @@ end
 
 -- Redraws the goblin from everything known about the open trade.
 local function render()
-    local check, headline, paragraphs, short = trade.check, nil, {}, {}
+    local check, last = trade.check, trade.last
+    local lines, short = {}, {}
+    local say = {lines = lines, short = short}
     if not check then
-        headline = "Checking..."
-        paragraphs[1] = "Let me look at their books."
-        short[1] = paragraphs[1]
-        if trade.last and trade.last.checked then
-            paragraphs[2] = "Last time (" .. date("%b %d", trade.last.at) .. ") I said " .. ns.Colored(trade.last.checked) .. "."
-        end
-    elseif check.reason then
-        headline = check.verdict
-        paragraphs[1] = check.reason
-        short[1] = check.reason
+        say.status, say.mood = "...", last and "Wave" or "Talk"
+        say.bubble = (last and "Back again! " or "") .. "Let me look at their books."
+        short[1] = "Checking their books..."
     else
-        headline = ns.Colored(check.verdict)
-        paragraphs[1] = ns.ADVICE[check.verdict]
-        paragraphs[2] = "|cffb0b0b0" .. ns.Brief(check, "their") .. "|r"
-        short[1] = paragraphs[2]
+        say.verdict, say.mood = check.verdict, ns.Mood(check.verdict)
+        say.bubble = check.reason or trade.quip
+        short[1] = check.reason or ("|cffd0d0d0" .. ns.Brief(check, "their") .. "|r")
+        if not check.reason then lines[1] = short[1] end
+    end
+    if last then
+        lines[#lines + 1] = "Old friend! Trade #" .. trade.trades .. " together."
+            .. (last.checked and (" Last time I said " .. ns.Colored(last.checked) .. ".") or "")
     end
     if trade.claimed then
-        paragraphs[#paragraphs + 1] = "Fellow Trusty Trader! Their goblin says " .. ns.Colored(trade.claimed) .. ". " .. claimNote()
+        lines[#lines + 1] = "Fellow Trusty Trader! Their goblin says " .. ns.Colored(trade.claimed) .. ". " .. claimNote()
+        short[#short + 1] = "Their goblin says " .. ns.Colored(trade.claimed) .. "."
     end
-    local risky = check and (check.reason or ns.LevelIndex(check.verdict) >= 3)
-    if risky and GetTargetTradeMoney() > 0 then
-        paragraphs[#paragraphs + 1] = "|cffff6060They're offering gold. If it was bought, Blizzard can take it back from you.|r"
-        short[#short + 1] = "|cffff6060They're offering gold. Careful.|r"
+    local offered = GetTargetTradeMoney()
+    if check and (check.reason or ns.LevelIndex(check.verdict) >= 3) then
+        for _, alarm in ipairs(ALARMS) do
+            if offered >= alarm[1] then
+                if check.reason then table.insert(lines, 1, check.reason) end
+                say.mood, say.bubble = alarm[2], alarm[3]
+                lines[#lines + 1] = "|cffff6060They're offering " .. ns.Gold(offered) .. ". Bought gold can be taken back.|r"
+                short[#short + 1] = "|cffff6060They're offering " .. ns.Gold(offered) .. ". Careful.|r"
+                break
+            end
+        end
     end
-    if trade.claimed then
-        table.insert(short, 2, "Their goblin says " .. ns.Colored(trade.claimed) .. ".")
-    end
-    ns.GoblinSay("trade", ns.Mood(check and check.verdict), headline, paragraphs, details(), short)
+    ns.GoblinSay("trade", say, details())
 end
 
 -- Saves the latest checked and claimed verdicts for the partner. An Unrated
@@ -105,6 +119,7 @@ local function store()
     if trade.check and not trade.check.reason then record.checked = trade.check.verdict end
     if trade.claimed then record.claimed = trade.claimed end
     record.at = time()
+    record.trades = trade.trades
     ns.db.verdicts[trade.guid] = record
 end
 
@@ -122,12 +137,15 @@ ns.On("TRADE_SHOW", function()
     if not guid or not name or ns.IsSecret(guid) then
         trade = nil
         ns.GoblinOpen("trade")
-        ns.GoblinSay("trade", "Question", "Who's this?", {"I can't tell who you're trading with."})
+        local words = "I can't tell who you're trading with."
+        ns.GoblinSay("trade", {mood = "Question", status = "WHO?", bubble = words, lines = {}, short = {words}})
         return
     end
     -- Copy the saved record: store() updates it in place during this trade.
     local saved = ns.db.verdicts[guid]
+    -- Records saved before trades were counted stand for one earlier trade.
     local this = {guid = guid, name = name, mine = ns.RateSelf(),
+        trades = (saved and (saved.trades or 1) or 0) + 1,
         last = saved and {checked = saved.checked, claimed = saved.claimed, at = saved.at}}
     trade = this
     ns.GoblinOpen("trade")
@@ -136,6 +154,7 @@ ns.On("TRADE_SHOW", function()
     ns.RatePartner("NPC", function(result)
         if trade ~= this then return end
         this.check = result
+        this.quip = not result.reason and ns.Quip(result.verdict) or nil
         store()
         render()
     end)

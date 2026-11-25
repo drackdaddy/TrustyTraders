@@ -2,7 +2,7 @@
 ## Title: Trusty Traders
 ## Notes: A goblin advisor that sizes up your trade partner's gold before you deal.
 ## Author: Drackwarworks with Claude
-## Version: 1.0
+## Version: 1.1
 ## SavedVariables: TrustyTradersDB
 ## IconTexture: Interface\Icons\INV_Misc_Coin_01
 ## X-License: MIT
