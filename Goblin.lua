@@ -6,8 +6,9 @@
 -- facts. Each new verdict slams the badge down and, with sounds on, plays a
 -- coin jingle or a warning horn. With the compact setting on, trades get a
 -- small strip instead: no goblin or bubble, just the badge and a line or two.
--- Either way a Details button opens the full reasoning attached to the
--- panel's right side. Escape closes it.
+-- Either way a Details button widens the panel to show the full reasoning in
+-- its right half (see Details), and clicking it again collapses it. Escape
+-- closes it.
 -- Events: none
 -- SavedVariables: reads TrustyTradersDB.compact and TrustyTradersDB.sound
 local _, ns = ...
@@ -150,13 +151,15 @@ local function compact()
     return panel.mode == "trade" and ns.db.compact
 end
 
--- Arranges the panel for the full or compact layout and sizes it to fit.
+-- Arranges the panel for the full or compact layout and sizes it to fit,
+-- widening it for the details half when that is open.
 local function layout()
     local small = compact()
     local badge, bubble, text, button = panel.badge, panel.bubble, panel.text, panel.button
     for _, region in ipairs({badge, bubble, text, button}) do region:ClearAllPoints() end
     panel.model:SetShown(not small)
     bubble:SetShown(not small)
+    local width, height
     if small then
         badge:SetSize(COMPACT_WIDTH - 20, 44)
         badge:SetPoint("TOPLEFT", 10, -24)
@@ -164,8 +167,8 @@ local function layout()
         text:SetWidth(COMPACT_WIDTH - 24)
         text:SetPoint("TOPLEFT", badge, "BOTTOMLEFT", 2, -8)
         button:SetSize(80, 20)
-        button:SetPoint("BOTTOMRIGHT", -10, 10)
-        panel:SetSize(COMPACT_WIDTH, 24 + 44 + 8 + text:GetStringHeight() + 38)
+        button:SetPoint("BOTTOMRIGHT", panel, "BOTTOMLEFT", COMPACT_WIDTH - 10, 10)
+        width, height = COMPACT_WIDTH, 24 + 44 + 8 + text:GetStringHeight() + 38
     else
         badge:SetSize(COLUMN, 56)
         badge:SetPoint("TOPLEFT", MODEL_WIDTH + 20, -24)
@@ -175,10 +178,15 @@ local function layout()
         text:SetWidth(COLUMN)
         text:SetPoint("TOPLEFT", bubble, "BOTTOMLEFT", 0, -10)
         button:SetSize(100, 22)
-        button:SetPoint("BOTTOMRIGHT", -12, 10)
+        button:SetPoint("BOTTOMRIGHT", panel, "BOTTOMLEFT", FULL_WIDTH - 12, 10)
         local column = 24 + 56 + 10 + bubble:GetHeight() + 10 + text:GetStringHeight() + 42
-        panel:SetSize(FULL_WIDTH, math.max(22 + MODEL_HEIGHT + 12, column))
+        width, height = FULL_WIDTH, math.max(22 + MODEL_HEIGHT + 12, column)
     end
+    local detailsWidth, detailsHeight = ns.DetailsSize()
+    if detailsWidth then
+        width, height = width + detailsWidth, math.max(height, detailsHeight)
+    end
+    panel:SetSize(width, height)
 end
 
 -- Sets the goblin on the model and plays its emote. SetCreature shows nothing
@@ -261,6 +269,11 @@ end
 -- True when the panel is showing for mode.
 function ns.GoblinIsOpen(mode)
     return panel ~= nil and panel:IsShown() and panel.mode == mode
+end
+
+-- Resizes the panel to fit after the details half opens or closes.
+function ns.GoblinFit()
+    if panel then layout() end
 end
 
 -- Redraws the open panel after a setting changes.

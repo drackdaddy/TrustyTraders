@@ -1,12 +1,11 @@
--- Details: a movable window with the goblin's full reasoning. A header shows
+-- Details: the goblin's full reasoning, shown as the right half of the goblin
+-- panel, which widens to hold it, so the two are one window. A header shows
 -- the name, the verdict and a risk meter; tabs below hold the Verdict
 -- reasoning, the game's Income and Spending counters with bars showing where
 -- gold came from and went, How it works: one sub-tab per verdict level
 -- with the math, a worked example and the current player's own numbers, and
--- Settings.
--- It opens attached to the goblin panel's right side, moves with it and
--- closes with it; while it is open, its X is the only close button and
--- closes both. Escape closes both too.
+-- Settings. The tabs hang below the panel's bottom edge. The panel's X and
+-- Escape close the whole window; the Details button collapses this half.
 -- Events: none
 -- SavedVariables: TrustyTradersDB.compact, TrustyTradersDB.sound (Settings tab)
 local _, ns = ...
@@ -17,7 +16,6 @@ local BODY_TOP = -168               -- where tab content starts, below the heade
 local ROW_HEIGHT = 28
 local ROWS = 9                      -- enough rows for the longest stats tab
 local SECTIONS = 6                  -- enough sections for the longest Verdict tab
-local ICON = "Interface\\Icons\\INV_Misc_Coin_01"
 local COIN = "|TInterface\\MoneyFrame\\UI-%sIcon:12:12:2:0|t"
 local TABS = {"Verdict", "Income", "Spending", "How it works", "Settings"}
 local LEVEL_TABS = {"Low", "Moderate", "Elevated", "High", ns.UNRATED}
@@ -308,31 +306,33 @@ local function buildBody()
     window.empty:SetText("The game hasn't shown me these counters yet.")
 end
 
--- Builds the window on first use as a child of panel, attached to its right
--- side. Dragging it drags the panel. Tabs use Blizzard's
--- PanelTabButtonTemplate, which needs named tabs.
+-- Builds the window on first use as the right part of panel: a plain frame
+-- along the panel's right edge, with a divider on its left. Dragging it drags
+-- the panel, and showing or hiding it resizes the panel to fit. Tabs use
+-- Blizzard's PanelTabButtonTemplate, which needs a named frame and named tabs.
 local function build(panel)
-    window = CreateFrame("Frame", "TrustyTradersDetails", panel, "ButtonFrameTemplate")
-    window:SetPortraitToAsset(ICON)
-    window:SetTitle("Trusty Traders: the goblin's books")
+    window = CreateFrame("Frame", "TrustyTradersDetails", panel)
+    -- Start hidden so the first Show fires OnShow and widens the panel.
+    window:Hide()
     window:SetSize(WIDTH, HEIGHT)
-    window:SetPoint("TOPLEFT", panel, "TOPRIGHT", 2, 0)
+    window:SetPoint("TOPRIGHT")
     window:EnableMouse(true)
     window:RegisterForDrag("LeftButton")
     window:SetScript("OnDragStart", function() panel:StartMoving() end)
     window:SetScript("OnDragStop", function() panel:StopMovingOrSizing() end)
-    tinsert(UISpecialFrames, "TrustyTradersDetails")
-    -- One close button for both: while this window is open its X closes the
-    -- panel (and with it this window), and the panel's own X is hidden.
-    window.CloseButton:SetScript("OnClick", function() panel:Hide() end)
-    window:SetScript("OnShow", function() panel.close:Hide() end)
-    window:SetScript("OnHide", function() panel.close:Show() end)
+    window:SetScript("OnShow", ns.GoblinFit)
+    window:SetScript("OnHide", ns.GoblinFit)
 
-    -- Everything sits on one child frame so the template's own inset art
-    -- can never cover it.
     window.content = CreateFrame("Frame", nil, window)
     window.content:SetAllPoints()
-    window.content:SetFrameLevel(window:GetFrameLevel() + 5)
+    local divider = window.content:CreateTexture(nil, "ARTWORK")
+    divider:SetColorTexture(1, 0.82, 0, 0.3)
+    divider:SetPoint("TOPLEFT", 0, -12)
+    divider:SetPoint("BOTTOMLEFT", 0, 12)
+    divider:SetWidth(1)
+    local title = window.content:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+    title:SetPoint("TOPLEFT", 24, -28)
+    title:SetText("The goblin's books")
 
     buildHeader()
     buildBody()
@@ -353,7 +353,7 @@ local function build(panel)
     PanelTemplates_SetNumTabs(window, #TABS)
 end
 
--- Closes the window if it is open; otherwise opens it beside panel on the
+-- Closes the window if it is open; otherwise opens it in panel on the
 -- Verdict tab with details ({name, whose ("your"
 -- or "their"), result, sections = {{heading, text}, ...}, stats}), or a
 -- placeholder when there are none yet. How it works starts on the player's level.
@@ -365,6 +365,11 @@ function ns.ToggleDetails(details, panel)
     level = shown.result and shown.result.verdict or "Low"
     window:Show()
     render()
+end
+
+-- The details half's width and height while it is open; nil while closed.
+function ns.DetailsSize()
+    if window and window:IsShown() then return WIDTH, HEIGHT end
 end
 
 -- Closes the window, e.g. when the goblin panel closes.
