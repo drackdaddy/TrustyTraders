@@ -76,9 +76,9 @@ ns.On("ADDON_LOADED", function(name)
     if name == addonName or name == "Blizzard_InspectUI" then follow() end
 end)
 
--- INSPECT_READY also fires for other addons' inspections, so only the player
--- shown in Blizzard's inspect window is checked, once per player.
-ns.On("INSPECT_READY", function(guid)
+-- Checks the player shown in Blizzard's inspect window, once per player.
+-- guid is the player INSPECT_READY was for.
+local function check(guid)
     if not ns.db.inspect or InCombatLockdown() or ns.GoblinIsOpen("trade") then return end
     if not InspectFrame or not InspectFrame:IsShown() or not InspectFrame.unit then return end
     local unit = InspectFrame.unit
@@ -95,4 +95,11 @@ ns.On("INSPECT_READY", function(guid)
         this.quip = not result.reason and ns.Quip(result.verdict) or nil
         render()
     end)
+end
+
+-- INSPECT_READY also fires for other addons' inspections, so only the player
+-- in Blizzard's inspect window counts. Blizzard shows that window on this same
+-- event, and its handler may run after this one, so wait a frame first.
+ns.On("INSPECT_READY", function(guid)
+    C_Timer.After(0, function() check(guid) end)
 end)
