@@ -13,8 +13,9 @@ A goblin advisor for World of Warcraft: Forever. When you open a trade, a goblin
 - **Warns louder** when a risky or unrated partner puts gold into the trade, and louder still as the offer grows past 100g and 1,000g.
 - **Remembers old friends.** A returning partner gets a wave and a count of how many times you've traded.
 - **Shows its reasoning.** A one-line brief in the panel, and a Details window with a risk meter and four tabs: the verdict, income, spending, and How it works, with the math for every level.
+- **Checks players you inspect.** Inspect someone and the goblin opens beside the inspect window with the same check. Nothing is sent to them or saved. Turn it off in Details > Settings.
 - **Rates you too.** Click the coin button on the minimap to see what other goblins see in your counters, the verdict your goblin sends after counting alt gold, and your rank in the cartel, from Trusty Trader to Suspicious Speculator.
-- **Compact mode.** In Details > Settings, switch trades to a small strip with just the verdict.
+- **Compact mode.** In Details > Settings, switch trades and inspects to a small strip with just the verdict.
 - **Sounds.** A coin jingle for a clean verdict, a warning horn for a risky one. Turn them off in Details > Settings.
 - **Remembers** the last verdict for each partner, on your PC only.
 - **Keeps an alt ledger.** Gold you mail between your own characters (on this WoW account, with the addon installed) counts as explained in your own verdict.

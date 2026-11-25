@@ -1,11 +1,12 @@
--- Goblin: the advisor panel. Beside the trade window it advises on the trade;
--- opened from the minimap it shows how you're rated. The full layout puts the
+-- Goblin: the advisor panel. Beside the trade window it advises on the trade,
+-- beside the inspect window it sizes up the inspected player, and opened from
+-- the minimap it shows how you're rated. The full layout puts the
 -- game's own goblin model (NPC 7564) on the left, playing an emote that fits
 -- the mood. On the right are a verdict badge drawn like a rubber stamp, a
 -- speech bubble whose words type themselves out, and a few short lines of
 -- facts. Each new verdict slams the badge down and, with sounds on, plays a
--- coin jingle or a warning horn. With the compact setting on, trades get a
--- small strip instead: no goblin or bubble, just the badge and a line or two.
+-- coin jingle or a warning horn. With the compact setting on, trades and
+-- inspects get a small strip instead: no goblin or bubble, just the badge and a line or two.
 -- Either way a Details button widens the panel to show the full reasoning in
 -- its right half (see Details), and clicking it again collapses it. Escape
 -- closes it.
@@ -23,7 +24,8 @@ local SOUNDS = {
     Elevated = SOUNDKIT.RAID_WARNING,
     High = SOUNDKIT.RAID_WARNING,
 }
-local TITLES = {trade = "Trusty Traders", self = "Your books"}
+local TITLES = {trade = "Trusty Traders", inspect = "Trusty Traders", self = "Your books"}
+local ANCHORS = {trade = "TradeFrame", inspect = "InspectFrame"} -- the window each mode sits beside
 local CREAM = {0.98, 0.94, 0.82}
 local FULL_WIDTH, COMPACT_WIDTH = 440, 260
 local MODEL_WIDTH, MODEL_HEIGHT = 150, 200
@@ -146,9 +148,10 @@ local function build()
     panel.button:SetScript("OnClick", function() ns.ToggleDetails(panel.details, panel) end)
 end
 
--- True when the panel should use the compact strip: trades with the setting on.
+-- True when the panel should use the compact strip: trades and inspects with
+-- the setting on.
 local function compact()
-    return panel.mode == "trade" and ns.db.compact
+    return panel.mode ~= "self" and ns.db.compact
 end
 
 -- Arranges the panel for the full or compact layout and sizes it to fit,
@@ -243,8 +246,8 @@ local function draw()
     layout()
 end
 
--- Shows the panel for mode: "trade" beside the trade window, or "self" in
--- the middle of the screen. GoblinSay calls for any other mode are ignored.
+-- Shows the panel for mode: "trade" beside the trade window, "inspect" beside
+-- the inspect window, or "self" in the middle of the screen. GoblinSay calls for any other mode are ignored.
 function ns.GoblinOpen(mode)
     if not panel then build() end
     panel.mode = mode
@@ -253,8 +256,8 @@ function ns.GoblinOpen(mode)
     panel.bubble.text = nil
     panel.title:SetText(TITLES[mode])
     panel:ClearAllPoints()
-    if mode == "trade" then
-        panel:SetPoint("TOPLEFT", TradeFrame, "TOPRIGHT", 4, 0)
+    if ANCHORS[mode] then
+        panel:SetPoint("TOPLEFT", _G[ANCHORS[mode]], "TOPRIGHT", 4, 0)
     else
         panel:SetPoint("CENTER")
     end

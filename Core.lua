@@ -2,7 +2,7 @@
 -- the helpers every feature shares (verdict scale, names, secret checks).
 -- Events: ADDON_LOADED (sets SavedVariables defaults)
 -- SavedVariables: TrustyTradersDB = {alts = {}, received = {}, verdicts = {},
---                 minimapAngle = 225, compact = false, sound = true}
+--                 minimapAngle = 225, compact = false, sound = true, inspect = true}
 local addonName, ns = ...
 
 local dispatcher = CreateFrame("Frame")
@@ -32,6 +32,7 @@ ns.On("ADDON_LOADED", function(name)
     db.minimapAngle = db.minimapAngle or 225
     db.compact = db.compact == true
     db.sound = db.sound ~= false
+    db.inspect = db.inspect ~= false
     ns.db = db
 end)
 

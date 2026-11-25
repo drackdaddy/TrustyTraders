@@ -7,7 +7,7 @@
 -- Settings. The tabs hang below the panel's bottom edge. The panel's X and
 -- Escape close the whole window; the Details button collapses this half.
 -- Events: none
--- SavedVariables: TrustyTradersDB.compact, TrustyTradersDB.sound (Settings tab)
+-- SavedVariables: TrustyTradersDB.compact, .sound and .inspect (Settings tab)
 local _, ns = ...
 
 local WIDTH, HEIGHT = 420, 600
@@ -169,6 +169,7 @@ local function render()
     window.settings:SetShown(tab == "Settings")
     window.compact:SetChecked(ns.db.compact)
     window.sound:SetChecked(ns.db.sound)
+    window.inspect:SetChecked(ns.db.inspect)
     for _, row in ipairs(window.rows) do row:Hide() end
     window.note:SetText("")
     window.empty:SetShown(BARS[tab] ~= nil and not stats)
@@ -286,7 +287,7 @@ local function buildBody()
     help:SetWidth(INNER - 30)
     help:SetJustifyH("LEFT")
     help:SetSpacing(2)
-    help:SetText("Trades open a small strip beside the trade window instead of the goblin: just the verdict, one line of reasoning and any gold warning. Details still opens the full reasoning. Your own rating from the minimap always uses the full goblin.")
+    help:SetText("Trades and inspects open a small strip instead of the goblin: just the verdict, one line of reasoning and any gold warning. Details still opens the full reasoning. Your own rating from the minimap always uses the full goblin.")
 
     window.sound = CreateFrame("CheckButton", nil, window.settings, "UICheckButtonTemplate")
     window.sound:SetSize(26, 26)
@@ -300,6 +301,19 @@ local function buildBody()
     soundHelp:SetWidth(INNER - 30)
     soundHelp:SetJustifyH("LEFT")
     soundHelp:SetText("A coin jingles when the goblin stamps a clean verdict, and a warning horn sounds for a risky one.")
+
+    window.inspect = CreateFrame("CheckButton", nil, window.settings, "UICheckButtonTemplate")
+    window.inspect:SetSize(26, 26)
+    window.inspect:SetPoint("TOPLEFT", soundHelp, "BOTTOMLEFT", -30, -14)
+    window.inspect:SetScript("OnClick", function(self) ns.db.inspect = self:GetChecked() and true or false end)
+    local inspectLabel = window.settings:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    inspectLabel:SetPoint("LEFT", window.inspect, "RIGHT", 4, 0)
+    inspectLabel:SetText("Check players I inspect")
+    local inspectHelp = window.settings:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    inspectHelp:SetPoint("TOPLEFT", window.inspect, "BOTTOMLEFT", 30, -2)
+    inspectHelp:SetWidth(INNER - 30)
+    inspectHelp:SetJustifyH("LEFT")
+    inspectHelp:SetText("When you inspect a player, the goblin opens beside the inspect window and checks their gold counters. Nothing is sent to them or saved.")
 
     window.empty = window.content:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
     window.empty:SetPoint("TOP", 0, BODY_TOP - 20)
@@ -360,7 +374,7 @@ end
 function ns.ToggleDetails(details, panel)
     if not window then build(panel)
     elseif window:IsShown() then window:Hide(); return end
-    shown = details or {sections = {{"Nothing yet", "Open a trade, or click the minimap button, and I'll show my reasoning here."}}}
+    shown = details or {sections = {{"Nothing yet", "Open a trade, inspect a player, or click the minimap button, and I'll show my reasoning here."}}}
     current = 1
     level = shown.result and shown.result.verdict or "Low"
     window:Show()

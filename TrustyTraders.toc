@@ -14,5 +14,6 @@ Comms.lua
 Details.lua
 Goblin.lua
 Trade.lua
+Inspect.lua
 Self.lua
 Minimap.lua
