@@ -1,11 +1,16 @@
 -- Self: shows how you're rated, in the goblin panel, opened from the minimap
 -- button. Two verdicts: what other goblins see in your game counters, and the
 -- one your goblin sends them after counting gold mailed between your alts.
+-- For fun, the goblin also names your rank in the cartel.
 -- Events: none
 -- SavedVariables: reads TrustyTradersDB.alts
 local _, ns = ...
 
 local NOTE = "Other goblins only see your game counters. Your alt gold is your own addon's record, so they can't check it. Gold you move to alts outside mail, such as by trading, isn't counted."
+
+-- Your cartel rank, by the verdict other goblins see.
+local RANKS = {Low = "Trusty Trader", Moderate = "Honest Hustler", Elevated = "Back-Alley Broker",
+    High = "Suspicious Speculator", [ns.UNRATED] = "Mystery Merchant"}
 
 -- Your alts' names in the ledger, sorted, as one line.
 local function altList()
@@ -49,21 +54,20 @@ end
 -- Opens the panel with your own rating.
 local function open()
     local seen, told = ns.RateSelf(true), ns.RateSelf()
-    local paragraphs = {}
-    if seen.reason then
-        paragraphs[1] = seen.reason
-    else
-        paragraphs[1] = "That's how other goblins see your books."
-        paragraphs[2] = "|cffb0b0b0" .. ns.Brief(seen, "your") .. "|r"
-    end
+    local lines = {seen.reason or ("|cffd0d0d0" .. ns.Brief(seen, "your") .. "|r")}
     if (told.alt or 0) > 0 then
-        paragraphs[#paragraphs + 1] = "Counting " .. ns.Gold(told.alt) .. " mailed from your alts, your goblin tells them "
+        lines[2] = "Counting " .. ns.Gold(told.alt) .. " mailed from your alts, your goblin tells them "
             .. ns.Colored(told.verdict) .. "."
     else
-        paragraphs[#paragraphs + 1] = "Your goblin tells them " .. ns.Colored(told.verdict) .. "."
+        lines[2] = "Your goblin tells them " .. ns.Colored(told.verdict) .. "."
     end
     ns.GoblinOpen("self")
-    ns.GoblinSay("self", ns.Mood(seen.verdict), ns.Colored(seen.verdict), paragraphs, details(seen, told))
+    ns.GoblinSay("self", {
+        mood = ns.Mood(seen.verdict),
+        verdict = seen.verdict,
+        bubble = "That's how other goblins see your books. Your cartel rank: " .. RANKS[seen.verdict] .. "!",
+        lines = lines,
+    }, details(seen, told))
 end
 
 -- Opens your rating, or closes it if it is already showing.

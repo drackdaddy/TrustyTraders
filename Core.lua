@@ -2,7 +2,7 @@
 -- the helpers every feature shares (verdict scale, names, secret checks).
 -- Events: ADDON_LOADED (sets SavedVariables defaults)
 -- SavedVariables: TrustyTradersDB = {alts = {}, received = {}, verdicts = {},
---                 minimapAngle = 225, compact = false}
+--                 minimapAngle = 225, compact = false, sound = true}
 local addonName, ns = ...
 
 local dispatcher = CreateFrame("Frame")
@@ -31,6 +31,7 @@ ns.On("ADDON_LOADED", function(name)
     db.verdicts = db.verdicts or {}
     db.minimapAngle = db.minimapAngle or 225
     db.compact = db.compact == true
+    db.sound = db.sound ~= false
     ns.db = db
 end)
 
@@ -39,15 +40,44 @@ end)
 ns.LEVELS = {{"Low", 0}, {"Moderate", 25}, {"Elevated", 50}, {"High", 75}}
 ns.UNRATED = "Unrated"
 local COLORS = {Low = "ff40ff40", Moderate = "ffffd100", Elevated = "ffff8000", High = "ffff4040"}
-local MOODS = {Low = "Cheer", Moderate = "Talk", Elevated = "Exclaim", High = "Exclaim"}
+local MOODS = {Low = "Cheer", Moderate = "Talk", Elevated = "Exclaim", High = "Point"}
 
--- What the goblin says for each verdict.
-ns.ADVICE = {
-    Low = "Their books look clean, friend. Deal away.",
-    Moderate = "Some of their gold has no paper trail. Probably alts. Probably.",
-    Elevated = "Half their gold came from somewhere I can't see. Keep it small.",
-    High = "Most of their gold came from nowhere. I'd walk away.",
+-- The word stamped on the goblin's badge for each verdict.
+ns.STAMPS = {Low = "TRUSTY", Moderate = "FAIR", Elevated = "IFFY", High = "RISKY", [ns.UNRATED] = "???"}
+
+-- What the goblin might say for each verdict; one is picked per trade.
+ns.QUIPS = {
+    Low = {
+        "Their books look clean, friend. Deal away.",
+        "Honest coin! Rarer than a cheap room in Gadgetzan.",
+        "Clean as a fresh-minted copper. Go on, deal.",
+        "Not a smudge on these books. I like 'em already.",
+    },
+    Moderate = {
+        "Some of their gold has no paper trail. Probably alts. Probably.",
+        "A few coins wandered in from nowhere. Keep an eye out.",
+        "Mostly honest. Mostly. Count your change.",
+        "Bit of fog around their gold. Nothing to panic over.",
+    },
+    Elevated = {
+        "Half their gold came from somewhere I can't see. Keep it small.",
+        "That's a lot of mystery money. Don't bet the shop.",
+        "My nose is twitching. Small deals only, friend.",
+        "Where'd all that come from? Keep your purse close.",
+    },
+    High = {
+        "Most of their gold came from nowhere. I'd walk away.",
+        "Whoa! These books smell worse than the Booty Bay docks.",
+        "Nope. My ears are ringing just looking at this.",
+        "If I were you, I'd find another buyer.",
+    },
 }
+
+-- A random quip for a rated verdict.
+function ns.Quip(verdict)
+    local quips = ns.QUIPS[verdict]
+    return quips[math.random(#quips)]
+end
 
 -- A verdict in its color, e.g. orange "Elevated". Unrated stays plain.
 function ns.Colored(verdict)
@@ -60,7 +90,7 @@ function ns.RGB(verdict)
     return tonumber(hex:sub(3, 4), 16) / 255, tonumber(hex:sub(5, 6), 16) / 255, tonumber(hex:sub(7, 8), 16) / 255
 end
 
--- The goblin's emote for a verdict; Unrated or unknown gets "Question".
+-- The goblin's mood for a verdict; Unrated or unknown gets "Question".
 function ns.Mood(verdict)
     return MOODS[verdict] or "Question"
 end
