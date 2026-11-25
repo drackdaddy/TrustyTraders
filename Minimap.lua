@@ -26,7 +26,8 @@ local function follow()
 end
 
 ns.On("PLAYER_LOGIN", function()
-    button = CreateFrame("Button", nil, Minimap)
+    -- Named so minimap-button collectors (e.g. OneForAll) can find it; they skip unnamed buttons.
+    button = CreateFrame("Button", "TrustyTradersMinimapButton", Minimap)
     button:SetSize(31, 31)
     button:SetFrameStrata("MEDIUM")
     button:SetFrameLevel(8)
