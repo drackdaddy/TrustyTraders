@@ -14,6 +14,7 @@ local GOBLIN = 7564 -- NPC ID, checked on Forever 1.60.1
 local ANIMATIONS = {Cheer = 68, Talk = 60, Exclaim = 64, Question = 65}
 local TITLES = {trade = "Trusty Traders", self = "Your books"}
 local FULL_WIDTH, FULL_HEIGHT, COMPACT_WIDTH = 240, 600, 260
+local RETRY_DELAY, RETRIES = 0.5, 10
 
 local panel
 local said -- the last GoblinSay content, kept so a layout change can redraw it
@@ -91,14 +92,26 @@ local function layout()
     end
 end
 
+-- Sets the goblin on the model and plays its emote. SetCreature shows nothing
+-- when the NPC isn't in the client's creature cache yet, so while the model
+-- stays empty this tries again every RETRY_DELAY seconds, up to tries more
+-- times, and stops once the panel is hidden.
+local function loadGoblin(model, tries)
+    model:SetCreature(GOBLIN)
+    model:SetAnimation(model.animation)
+    if tries > 0 then
+        C_Timer.After(RETRY_DELAY, function()
+            if model:IsVisible() and not model:GetModelFileID() then loadGoblin(model, tries - 1) end
+        end)
+    end
+end
+
 -- Shows the current content in the current layout.
 local function draw()
     local small = compact()
     if not small then
-        local model = panel.model
-        model.animation = ANIMATIONS[said.mood]
-        model:SetCreature(GOBLIN)
-        model:SetAnimation(model.animation)
+        panel.model.animation = ANIMATIONS[said.mood]
+        loadGoblin(panel.model, RETRIES)
     end
     panel.headline:SetText(said.headline)
     panel.text:SetText(table.concat(small and said.short or said.paragraphs, small and "\n" or "\n\n"))
